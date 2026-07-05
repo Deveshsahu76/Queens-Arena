@@ -1,0 +1,14 @@
+node_modules/
+client/node_modules/
+server/node_modules/
+
+.env
+.env.local
+client/.env
+server/.env
+
+dist/
+client/dist/
+
+npm-debug.log*
+.DS_Store
