@@ -29,6 +29,183 @@ const REGION_COLORS = [
   "#b39ddb",
 ];
 
+const ACHIEVEMENTS = [
+  {
+    id: "first_clear",
+    title: "First Clear",
+    description: "Complete your first level",
+    reward: 20,
+    condition: (stats) => stats.completedLevels.length >= 1,
+  },
+  {
+    id: "five_levels",
+    title: "Rising Solver",
+    description: "Complete 5 different levels",
+    reward: 50,
+    condition: (stats) => stats.completedLevels.length >= 5,
+  },
+  {
+    id: "ten_levels",
+    title: "Puzzle Warrior",
+    description: "Complete 10 different levels",
+    reward: 100,
+    condition: (stats) => stats.completedLevels.length >= 10,
+  },
+  {
+    id: "daily_challenger",
+    title: "Daily Challenger",
+    description: "Complete 3 daily challenges",
+    reward: 80,
+    condition: (stats) => stats.dailyChallengesCompleted >= 3,
+  },
+  {
+    id: "no_hint_master",
+    title: "No Hint Master",
+    description: "Complete 5 levels without hints",
+    reward: 75,
+    condition: (stats) => stats.noHintWins >= 5,
+  },
+  {
+    id: "coin_collector",
+    title: "Coin Collector",
+    description: "Collect 500 coins",
+    reward: 100,
+    condition: (stats) => stats.coins >= 500,
+  },
+  {
+    id: "seven_day_streak",
+    title: "Streak King",
+    description: "Reach a 7 day streak",
+    reward: 150,
+    condition: (stats) => stats.bestStreak >= 7,
+  },
+];
+
+const SHOP_ITEMS = [
+  {
+    id: "hint_credit_1",
+    title: "1 Hint Credit",
+    description: "Use this when level hint limit is over.",
+    price: 30,
+    hintCredits: 1,
+  },
+  {
+    id: "hint_credit_3",
+    title: "3 Hint Credits",
+    description: "Best for hard levels.",
+    price: 80,
+    hintCredits: 3,
+  },
+  {
+    id: "hint_credit_5",
+    title: "5 Hint Credits",
+    description: "Value pack for expert puzzles.",
+    price: 120,
+    hintCredits: 5,
+  },
+];
+
+const createDefaultPlayerStats = () => ({
+  coins: 0,
+  hintCredits: 0,
+  totalWins: 0,
+  noHintWins: 0,
+  highestLevel: 1,
+  currentStreak: 0,
+  bestStreak: 0,
+  lastDailyClaim: "",
+  checkInDates: [],
+  completedLevels: [],
+  achievements: [],
+  dailyChallengesCompleted: 0,
+  completedDailyChallenges: [],
+});
+
+const getTodayKey = (offset = 0) => {
+  const date = new Date();
+  date.setDate(date.getDate() + offset);
+  return date.toISOString().slice(0, 10);
+};
+
+const getDateKeyFromDate = (date) => date.toISOString().slice(0, 10);
+
+const getPlayerStatsKey = (user) => {
+  const playerId = user?._id || user?.email || user?.name || "guest";
+  return `queensPlayerStats:${playerId}`;
+};
+
+const normalizePlayerStats = (stats) => ({
+  ...createDefaultPlayerStats(),
+  ...stats,
+  completedLevels: Array.isArray(stats?.completedLevels)
+    ? stats.completedLevels
+    : [],
+  achievements: Array.isArray(stats?.achievements) ? stats.achievements : [],
+  checkInDates: Array.isArray(stats?.checkInDates) ? stats.checkInDates : [],
+  completedDailyChallenges: Array.isArray(stats?.completedDailyChallenges)
+    ? stats.completedDailyChallenges
+    : [],
+});
+
+const getSavedPlayerStats = (user) => {
+  try {
+    const saved = localStorage.getItem(getPlayerStatsKey(user));
+
+    if (!saved) {
+      return createDefaultPlayerStats();
+    }
+
+    return normalizePlayerStats(JSON.parse(saved));
+  } catch (error) {
+    return createDefaultPlayerStats();
+  }
+};
+
+const applyAchievementRewards = (stats) => {
+  const unlocked = new Set(stats.achievements || []);
+  let bonusCoins = 0;
+
+  ACHIEVEMENTS.forEach((achievement) => {
+    if (!unlocked.has(achievement.id) && achievement.condition(stats)) {
+      unlocked.add(achievement.id);
+      bonusCoins += achievement.reward;
+    }
+  });
+
+  return {
+    ...stats,
+    coins: stats.coins + bonusCoins,
+    achievements: Array.from(unlocked),
+  };
+};
+
+const getLevelCoinReward = (level, usedHelp, seconds, isDailyChallenge) => {
+  const baseCoins = isDailyChallenge ? 40 : 10;
+  const difficultyBonus = Math.min(30, Math.floor(level / 10) * 5);
+  const noHintBonus = usedHelp ? 0 : 15;
+  const fastBonus = seconds > 0 && seconds <= 60 ? 10 : 0;
+
+  return baseCoins + difficultyBonus + noHintBonus + fastBonus;
+};
+
+const getDailyChallengeLevel = () => {
+  const today = getTodayKey();
+  const numericDate = Number(today.replaceAll("-", ""));
+  return ((numericDate * 7) % 100) + 1;
+};
+
+const getStreakCalendarDays = () => {
+  const days = [];
+
+  for (let i = 34; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    days.push(getDateKeyFromDate(date));
+  }
+
+  return days;
+};
+
 const createSeededRandom = (seed) => {
   let value = seed % 2147483647;
 
@@ -217,9 +394,9 @@ const generateRegionMap = (size, solution, seed) => {
   return map;
 };
 
-const generateLevelData = (level) => {
+const generateLevelData = (level, seedOffset = 0) => {
   const config = getLevelConfig(level);
-  const seed = level * 7919 + config.boardSize * 97;
+  const seed = level * 7919 + config.boardSize * 97 + seedOffset;
   const solution = solveNoTouchQueens(config.boardSize, seed);
   const regionMap = generateRegionMap(config.boardSize, solution, seed);
 
@@ -227,6 +404,7 @@ const generateLevelData = (level) => {
     ...config,
     solution,
     regionMap,
+    seed,
   };
 };
 
@@ -420,6 +598,20 @@ function Navbar({ user, currentPage, setCurrentPage, logout }) {
               onClick={() => setCurrentPage("game")}
             >
               Game
+            </button>
+
+            <button
+              className={currentPage === "daily" ? "active-nav" : ""}
+              onClick={() => setCurrentPage("daily")}
+            >
+              Daily
+            </button>
+
+            <button
+              className={currentPage === "profile" ? "active-nav" : ""}
+              onClick={() => setCurrentPage("profile")}
+            >
+              Profile
             </button>
 
             <button
@@ -687,13 +879,23 @@ function Board({ size, regionMap, queens, marks, onCellClick }) {
   );
 }
 
-function WinModal({ level, moves, seconds, onNextLevel, onReplay }) {
+function WinModal({
+  level,
+  moves,
+  seconds,
+  coinsEarned,
+  isDailyChallenge,
+  onNextLevel,
+  onReplay,
+}) {
   return (
     <div className="modal-backdrop">
       <div className="win-modal">
         <div className="celebrate">🎉🏆✨</div>
-        <h1>Congratulations!</h1>
-        <p>You completed Level {level} successfully.</p>
+        <h1>{isDailyChallenge ? "Daily Challenge Complete!" : "Congratulations!"}</h1>
+        <p>
+          You completed {isDailyChallenge ? "today's challenge" : `Level ${level}`} successfully.
+        </p>
 
         <div className="modal-stats">
           <div>
@@ -705,12 +907,23 @@ function WinModal({ level, moves, seconds, onNextLevel, onReplay }) {
             <span>Time</span>
             <strong>{seconds}s</strong>
           </div>
+
+          <div>
+            <span>Coins</span>
+            <strong>{coinsEarned > 0 ? `+${coinsEarned}` : "0"}</strong>
+          </div>
         </div>
 
-        <div className="modal-actions">
-          <button onClick={onReplay}>Replay Level</button>
+        {coinsEarned === 0 && (
+          <p className="replay-note">
+            Coins are rewarded only on first clear of each level/challenge.
+          </p>
+        )}
 
-          {level < 100 ? (
+        <div className="modal-actions">
+          <button onClick={onReplay}>Replay</button>
+
+          {!isDailyChallenge && level < 100 ? (
             <button className="primary-action" onClick={onNextLevel}>
               Next Level →
             </button>
@@ -725,7 +938,89 @@ function WinModal({ level, moves, seconds, onNextLevel, onReplay }) {
   );
 }
 
-function Game({ user }) {
+function StreakCalendar({ playerStats }) {
+  const days = getStreakCalendarDays();
+  const checkedDays = new Set(playerStats.checkInDates || []);
+  const today = getTodayKey();
+
+  return (
+    <div className="streak-card">
+      <div className="streak-header">
+        <div>
+          <span className="reward-label">LeetCode Style Streak</span>
+          <h3>🔥 {playerStats.currentStreak} Day Current Streak</h3>
+          <p>Best streak: {playerStats.bestStreak} days</p>
+        </div>
+      </div>
+
+      <div className="streak-grid">
+        {days.map((day) => (
+          <span
+            key={day}
+            className={`streak-day ${
+              checkedDays.has(day) ? "active" : ""
+            } ${day === today ? "today" : ""}`}
+            title={day}
+          ></span>
+        ))}
+      </div>
+
+      <div className="streak-legend">
+        <span>Less</span>
+        <span className="streak-day"></span>
+        <span className="streak-day active"></span>
+        <span>More</span>
+      </div>
+    </div>
+  );
+}
+
+function ShopBox({ playerStats, setPlayerStats, setRewardMessage }) {
+  const buyItem = (item) => {
+    if (playerStats.coins < item.price) {
+      setRewardMessage(`Not enough coins. You need ${item.price} coins.`);
+      return;
+    }
+
+    setPlayerStats((prev) =>
+      applyAchievementRewards({
+        ...prev,
+        coins: prev.coins - item.price,
+        hintCredits: prev.hintCredits + item.hintCredits,
+      })
+    );
+
+    setRewardMessage(
+      `Purchased ${item.title}. +${item.hintCredits} hint credit added.`
+    );
+  };
+
+  return (
+    <div className="shop-box">
+      <h3>Coin Shop</h3>
+      <p>Use coins to buy extra hint credits.</p>
+
+      <div className="shop-list">
+        {SHOP_ITEMS.map((item) => (
+          <div className="shop-item" key={item.id}>
+            <div>
+              <strong>{item.title}</strong>
+              <p>{item.description}</p>
+            </div>
+
+            <button onClick={() => buyItem(item)}>🪙 {item.price}</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Game({ user, mode = "level" }) {
+  const isDailyChallenge = mode === "daily";
+  const today = getTodayKey();
+  const dailyLevel = getDailyChallengeLevel();
+
   const savedUnlockedLevel =
     Number(localStorage.getItem("queensUnlockedLevel")) || 1;
 
@@ -733,15 +1028,20 @@ function Game({ user }) {
     Number(localStorage.getItem("queensCurrentLevel")) || 1;
 
   const initialUnlockedLevel = Math.max(1, Math.min(100, savedUnlockedLevel));
-  const initialCurrentLevel = Math.max(
-    1,
-    Math.min(initialUnlockedLevel, savedCurrentLevel)
-  );
+  const initialCurrentLevel = isDailyChallenge
+    ? dailyLevel
+    : Math.max(1, Math.min(initialUnlockedLevel, savedCurrentLevel));
 
   const [level, setLevel] = useState(initialCurrentLevel);
   const [unlockedLevel, setUnlockedLevel] = useState(initialUnlockedLevel);
 
-  const levelData = useMemo(() => generateLevelData(level), [level]);
+  const levelData = useMemo(() => {
+    if (isDailyChallenge) {
+      return generateLevelData(dailyLevel, Number(today.replaceAll("-", "")));
+    }
+
+    return generateLevelData(level);
+  }, [level, isDailyChallenge, dailyLevel, today]);
 
   const size = levelData.boardSize;
   const regionMap = levelData.regionMap;
@@ -758,9 +1058,23 @@ function Game({ user }) {
   const [hintsUsed, setHintsUsed] = useState(0);
   const [showWinModal, setShowWinModal] = useState(false);
   const [hintText, setHintText] = useState("");
+  const [coinsEarned, setCoinsEarned] = useState(0);
+  const [rewardMessage, setRewardMessage] = useState("");
+  const [playerStats, setPlayerStats] = useState(() => getSavedPlayerStats(user));
   const [message, setMessage] = useState(
-    "Place queens using the rules. Use X to eliminate cells."
+    isDailyChallenge
+      ? "Complete today's challenge and earn bonus coins."
+      : "Place queens using the rules. Use X to eliminate cells."
   );
+
+  useEffect(() => {
+    const savedStats = getSavedPlayerStats(user);
+    setPlayerStats(savedStats);
+  }, [user]);
+
+  useEffect(() => {
+    localStorage.setItem(getPlayerStatsKey(user), JSON.stringify(playerStats));
+  }, [playerStats, user]);
 
   useEffect(() => {
     let timer;
@@ -800,11 +1114,20 @@ function Game({ user }) {
     setHintsUsed(0);
     setShowWinModal(false);
     setHintText("");
+    setCoinsEarned(0);
     setTool("queen");
-    setMessage(`Level ${newLevel} started. Difficulty: ${config.difficulty}.`);
+    setMessage(
+      isDailyChallenge
+        ? `Daily Challenge started. Difficulty: ${config.difficulty}.`
+        : `Level ${newLevel} started. Difficulty: ${config.difficulty}.`
+    );
   };
 
   const saveScore = async (finalQueens, finalMoves, finalTime) => {
+    if (isDailyChallenge) {
+      return false;
+    }
+
     try {
       await API.post("/scores/save", {
         level,
@@ -814,22 +1137,111 @@ function Game({ user }) {
         timeTaken: finalTime,
       });
 
-      setMessage("🎉 Great solve! Your score is saved to leaderboard.");
+      return true;
     } catch (error) {
-      setMessage(error.response?.data?.message || "Score could not be saved.");
+      return false;
     }
   };
 
+  const addLevelReward = () => {
+    let reward = 0;
+
+    if (isDailyChallenge) {
+      const challengeKey = `daily-${today}`;
+
+      if (!playerStats.completedDailyChallenges.includes(challengeKey)) {
+        reward = getLevelCoinReward(level, usedHelp, seconds, true);
+      }
+
+      setCoinsEarned(reward);
+
+      setPlayerStats((prev) => {
+        const alreadyCompleted = prev.completedDailyChallenges.includes(challengeKey);
+
+        const updatedStats = {
+          ...prev,
+          coins: alreadyCompleted ? prev.coins : prev.coins + reward,
+          dailyChallengesCompleted: alreadyCompleted
+            ? prev.dailyChallengesCompleted
+            : prev.dailyChallengesCompleted + 1,
+          completedDailyChallenges: alreadyCompleted
+            ? prev.completedDailyChallenges
+            : [...prev.completedDailyChallenges, challengeKey],
+        };
+
+        return applyAchievementRewards(updatedStats);
+      });
+
+      return reward;
+    }
+
+    const levelAlreadyCompleted = playerStats.completedLevels.includes(level);
+
+    if (!levelAlreadyCompleted) {
+      reward = getLevelCoinReward(level, usedHelp, seconds, false);
+    }
+
+    setCoinsEarned(reward);
+
+    setPlayerStats((prev) => {
+      const alreadyCompleted = prev.completedLevels.includes(level);
+
+      const updatedStats = {
+        ...prev,
+        coins: alreadyCompleted ? prev.coins : prev.coins + reward,
+        totalWins: alreadyCompleted ? prev.totalWins : prev.totalWins + 1,
+        noHintWins:
+          alreadyCompleted || usedHelp ? prev.noHintWins : prev.noHintWins + 1,
+        highestLevel: Math.max(prev.highestLevel || 1, level),
+        completedLevels: alreadyCompleted
+          ? prev.completedLevels
+          : [...prev.completedLevels, level],
+      };
+
+      return applyAchievementRewards(updatedStats);
+    });
+
+    return reward;
+  };
+
   const completeLevel = async (updatedQueens, finalMoves) => {
+    const reward = addLevelReward();
+
     setGameWon(true);
     setGameStarted(false);
     setShowWinModal(true);
 
-    if (usedHelp) {
-      setMessage("🎉 Level completed! Score is not saved because hint was used.");
-    } else {
-      await saveScore(updatedQueens, finalMoves, seconds);
+    let scoreSaved = false;
+
+    if (!usedHelp && !isDailyChallenge) {
+      scoreSaved = await saveScore(updatedQueens, finalMoves, seconds);
     }
+
+    if (isDailyChallenge) {
+      setMessage(
+        reward > 0
+          ? `🎉 Daily Challenge completed! +${reward} coins earned.`
+          : "🎉 Daily Challenge replay completed. No extra coins today."
+      );
+      return;
+    }
+
+    if (usedHelp) {
+      setMessage(
+        reward > 0
+          ? `🎉 Level completed! +${reward} coins earned. Score was not saved because hint was used.`
+          : "🎉 Replay completed. No extra coins for already completed level."
+      );
+      return;
+    }
+
+    setMessage(
+      reward > 0
+        ? `🎉 Level completed! +${reward} coins earned. ${
+            scoreSaved ? "Score saved." : "Score could not be saved."
+          }`
+        : "🎉 Replay completed. No extra coins for already completed level."
+    );
   };
 
   const handleCellClick = async (row, col) => {
@@ -935,9 +1347,14 @@ function Game({ user }) {
       return;
     }
 
-    if (hintsUsed >= levelData.hintLimit) {
-      setHintText("Hint limit reached for this level.");
-      setMessage("Hint limit reached.");
+    const canUseFreeHint = hintsUsed < levelData.hintLimit;
+    const canUseCredit = playerStats.hintCredits > 0;
+
+    if (!canUseFreeHint && !canUseCredit) {
+      setHintText(
+        "Hint limit reached. Buy hint credits from the Coin Shop using coins."
+      );
+      setMessage("Hint limit reached. Buy hint credits using coins.");
       return;
     }
 
@@ -949,8 +1366,7 @@ function Game({ user }) {
       return;
     }
 
-    const seed = level * 7919 + size * 97;
-    const solution = solveRegionPuzzle(size, regionMap, queens, seed);
+    const solution = solveRegionPuzzle(size, regionMap, queens, levelData.seed);
 
     if (solution.length === 0) {
       setHintText("No safe hint found. Try removing one queen or mark.");
@@ -973,7 +1389,17 @@ function Game({ user }) {
     const regionId = getRegionId(regionMap, hintQueen.row, hintQueen.col);
 
     setUsedHelp(true);
-    setHintsUsed((prev) => prev + 1);
+
+    if (canUseFreeHint) {
+      setHintsUsed((prev) => prev + 1);
+    } else {
+      setPlayerStats((prev) =>
+        normalizePlayerStats({
+          ...prev,
+          hintCredits: Math.max(0, prev.hintCredits - 1),
+        })
+      );
+    }
 
     setHintText(
       `Hint: Color region ${regionId + 1} still needs one queen. A possible safe cell is Row ${
@@ -981,7 +1407,45 @@ function Game({ user }) {
       }, Column ${hintQueen.col + 1}.`
     );
 
-    setMessage("Hint generated. Read the hint panel below the board.");
+    setMessage(
+      canUseFreeHint
+        ? "Hint generated. Read the hint panel below the board."
+        : "Hint credit used. Read the hint panel below the board."
+    );
+  };
+
+  const claimDailyReward = () => {
+    if (playerStats.lastDailyClaim === today) {
+      setRewardMessage("Daily check-in already claimed today.");
+      return;
+    }
+
+    const yesterday = getTodayKey(-1);
+    const nextStreak =
+      playerStats.lastDailyClaim === yesterday
+        ? playerStats.currentStreak + 1
+        : 1;
+
+    const dailyCoins = nextStreak % 7 === 0 ? 100 : 25;
+
+    setPlayerStats((prev) => {
+      const updatedStats = {
+        ...prev,
+        coins: prev.coins + dailyCoins,
+        currentStreak: nextStreak,
+        bestStreak: Math.max(prev.bestStreak, nextStreak),
+        lastDailyClaim: today,
+        checkInDates: Array.from(new Set([...(prev.checkInDates || []), today])),
+      };
+
+      return applyAchievementRewards(updatedStats);
+    });
+
+    setRewardMessage(
+      nextStreak % 7 === 0
+        ? `🔥 Day ${nextStreak} streak! +${dailyCoins} bonus coins claimed.`
+        : `🎁 Daily check-in claimed! +${dailyCoins} coins.`
+    );
   };
 
   const resetGame = () => {
@@ -989,6 +1453,11 @@ function Game({ user }) {
   };
 
   const goToNextLevel = () => {
+    if (isDailyChallenge) {
+      resetBoardState(level);
+      return;
+    }
+
     const nextLevel = Math.min(level + 1, 100);
     const nextUnlockedLevel = Math.max(unlockedLevel, nextLevel);
 
@@ -1006,6 +1475,8 @@ function Game({ user }) {
   };
 
   const currentStatus = validatePartialQueens(queens, regionMap, size);
+  const dailyChallengeKey = `daily-${today}`;
+  const dailyCompleted = playerStats.completedDailyChallenges.includes(dailyChallengeKey);
 
   return (
     <>
@@ -1014,6 +1485,8 @@ function Game({ user }) {
           level={level}
           moves={moves}
           seconds={seconds}
+          coinsEarned={coinsEarned}
+          isDailyChallenge={isDailyChallenge}
           onNextLevel={goToNextLevel}
           onReplay={replayLevel}
         />
@@ -1026,10 +1499,17 @@ function Game({ user }) {
               <div className={`difficulty-pill ${levelData.difficultyClass}`}>
                 {levelData.difficulty}
               </div>
-              <h1>Queens Puzzle</h1>
+              <h1>{isDailyChallenge ? "Daily Challenge" : "Queens Puzzle"}</h1>
               <p>
-                Level {level} • {levelData.title} • {size}x{size} board
+                {isDailyChallenge
+                  ? `Today • Level ${dailyLevel} • ${size}x${size} board`
+                  : `Level ${level} • ${levelData.title} • ${size}x${size} board`}
               </p>
+            </div>
+
+            <div className="timer-box coin-wallet">
+              <span>Coins</span>
+              <strong>🪙 {playerStats.coins}</strong>
             </div>
 
             <div className="timer-box">
@@ -1038,22 +1518,35 @@ function Game({ user }) {
             </div>
           </div>
 
-          <div className="level-progress">
-            <div className="progress-info">
-              <span>Unlocked Progress</span>
-              <strong>{unlockedLevel}/100</strong>
-            </div>
+          {!isDailyChallenge && (
+            <div className="level-progress">
+              <div className="progress-info">
+                <span>Unlocked Progress</span>
+                <strong>{unlockedLevel}/100</strong>
+              </div>
 
-            <div className="progress-track">
-              <div
-                className="progress-fill"
-                style={{ width: `${unlockedLevel}%` }}
-              ></div>
+              <div className="progress-track">
+                <div
+                  className="progress-fill"
+                  style={{ width: `${unlockedLevel}%` }}
+                ></div>
+              </div>
             </div>
-          </div>
+          )}
+
+          {isDailyChallenge && (
+            <div className="daily-banner">
+              <strong>Daily Bonus:</strong>{" "}
+              {dailyCompleted
+                ? "Already completed today. Replay for practice."
+                : "Complete once today and earn extra coins."}
+            </div>
+          )}
 
           <div className="controls-row">
-            <div className="level-badge">Level {level}</div>
+            <div className="level-badge">
+              {isDailyChallenge ? "Daily" : `Level ${level}`}
+            </div>
 
             <button
               className={tool === "queen" ? "tool-active" : ""}
@@ -1076,7 +1569,11 @@ function Game({ user }) {
             <button onClick={resetGame}>Reset</button>
 
             <button onClick={showHint}>
-              Hint {levelData.hintLimit - hintsUsed}/{levelData.hintLimit}
+              Hint {Math.max(0, levelData.hintLimit - hintsUsed)}/
+              {levelData.hintLimit}
+              {playerStats.hintCredits > 0
+                ? ` + ${playerStats.hintCredits} credit`
+                : ""}
             </button>
           </div>
 
@@ -1116,6 +1613,44 @@ function Game({ user }) {
             </div>
           </div>
 
+          <div className="reward-card">
+            <div>
+              <span className="reward-label">Wallet</span>
+              <h2>🪙 {playerStats.coins}</h2>
+              <p>Hint credits: {playerStats.hintCredits}</p>
+            </div>
+          </div>
+
+          <div className="daily-card">
+            <div>
+              <span className="reward-label">Daily Check-in</span>
+              <h3>🔥 {playerStats.currentStreak} Day Streak</h3>
+              <p>
+                Claim daily coins and build your streak. Every 7th day gives
+                bonus coins.
+              </p>
+            </div>
+
+            <button
+              onClick={claimDailyReward}
+              disabled={playerStats.lastDailyClaim === today}
+            >
+              {playerStats.lastDailyClaim === today
+                ? "Checked-in Today"
+                : "Check-in +25 Coins"}
+            </button>
+
+            {rewardMessage && <small>{rewardMessage}</small>}
+          </div>
+
+          <StreakCalendar playerStats={playerStats} />
+
+          <ShopBox
+            playerStats={playerStats}
+            setPlayerStats={setPlayerStats}
+            setRewardMessage={setRewardMessage}
+          />
+
           <div className="stats-grid">
             <div className="stat-card">
               <span>Level</span>
@@ -1123,25 +1658,23 @@ function Game({ user }) {
             </div>
 
             <div className="stat-card">
-              <span>Unlocked</span>
-              <strong>{unlockedLevel}/100</strong>
+              <span>Completed</span>
+              <strong>{playerStats.completedLevels.length}</strong>
             </div>
 
             <div className="stat-card">
-              <span>Queens</span>
-              <strong>
-                {queens.length}/{size}
-              </strong>
+              <span>Best Streak</span>
+              <strong>{playerStats.bestStreak}</strong>
+            </div>
+
+            <div className="stat-card">
+              <span>Daily Wins</span>
+              <strong>{playerStats.dailyChallengesCompleted}</strong>
             </div>
 
             <div className="stat-card">
               <span>Moves</span>
               <strong>{moves}</strong>
-            </div>
-
-            <div className="stat-card">
-              <span>Marks</span>
-              <strong>{marks.length}</strong>
             </div>
 
             <div className="stat-card">
@@ -1156,21 +1689,230 @@ function Game({ user }) {
             </div>
           </div>
 
+          <div className="achievement-box">
+            <h3>Achievements</h3>
+
+            <div className="achievement-list">
+              {ACHIEVEMENTS.map((achievement) => {
+                const unlocked = playerStats.achievements.includes(
+                  achievement.id
+                );
+
+                return (
+                  <div
+                    key={achievement.id}
+                    className={`achievement-item ${unlocked ? "unlocked" : ""}`}
+                  >
+                    <div>
+                      <strong>
+                        {unlocked ? "🏆" : "🔒"} {achievement.title}
+                      </strong>
+                      <p>{achievement.description}</p>
+                    </div>
+                    <span>+{achievement.reward}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="rules-box">
-            <h3>How to Play</h3>
+            <h3>How to Earn Coins</h3>
 
             <ol>
-              <li>Place exactly one ♛ in every row.</li>
-              <li>Place exactly one ♛ in every column.</li>
-              <li>Place exactly one ♛ in every color region.</li>
-              <li>Two queens cannot touch, even diagonally.</li>
-              <li>Use × marks to eliminate impossible cells.</li>
-              <li>Using hint will stop score saving for that level.</li>
+              <li>Complete a new level to earn coins.</li>
+              <li>No-hint level clear gives bonus coins.</li>
+              <li>Daily check-in gives coins every day.</li>
+              <li>Daily challenge gives bonus coins.</li>
+              <li>Achievements unlock bonus coins.</li>
+              <li>Use coins to buy hint credits.</li>
             </ol>
           </div>
         </aside>
       </div>
     </>
+  );
+}
+
+function Profile({ user }) {
+  const [playerStats, setPlayerStats] = useState(() => getSavedPlayerStats(user));
+  const today = getTodayKey();
+
+  useEffect(() => {
+    const savedStats = getSavedPlayerStats(user);
+    setPlayerStats(savedStats);
+  }, [user]);
+
+  useEffect(() => {
+    localStorage.setItem(getPlayerStatsKey(user), JSON.stringify(playerStats));
+  }, [playerStats, user]);
+
+  const claimDailyReward = () => {
+    if (playerStats.lastDailyClaim === today) {
+      return;
+    }
+
+    const yesterday = getTodayKey(-1);
+    const nextStreak =
+      playerStats.lastDailyClaim === yesterday
+        ? playerStats.currentStreak + 1
+        : 1;
+
+    const dailyCoins = nextStreak % 7 === 0 ? 100 : 25;
+
+    setPlayerStats((prev) => {
+      const updatedStats = {
+        ...prev,
+        coins: prev.coins + dailyCoins,
+        currentStreak: nextStreak,
+        bestStreak: Math.max(prev.bestStreak, nextStreak),
+        lastDailyClaim: today,
+        checkInDates: Array.from(new Set([...(prev.checkInDates || []), today])),
+      };
+
+      return applyAchievementRewards(updatedStats);
+    });
+  };
+
+  return (
+    <div className="profile-page">
+      <div className="profile-hero">
+        <span className="profile-avatar">
+          {user?.name?.[0]?.toUpperCase() || "Q"}
+        </span>
+
+        <div>
+          <span className="section-tag">Player Profile</span>
+          <h1>{user?.name}</h1>
+          <p>{user?.email}</p>
+        </div>
+      </div>
+
+      <div className="profile-cards">
+        <div className="profile-card">
+          <span>Total Coins</span>
+          <strong>🪙 {playerStats.coins}</strong>
+        </div>
+
+        <div className="profile-card">
+          <span>Hint Credits</span>
+          <strong>{playerStats.hintCredits}</strong>
+        </div>
+
+        <div className="profile-card">
+          <span>Completed Levels</span>
+          <strong>{playerStats.completedLevels.length}</strong>
+        </div>
+
+        <div className="profile-card">
+          <span>Best Streak</span>
+          <strong>🔥 {playerStats.bestStreak}</strong>
+        </div>
+
+        <div className="profile-card">
+          <span>Daily Challenges</span>
+          <strong>{playerStats.dailyChallengesCompleted}</strong>
+        </div>
+
+        <div className="profile-card">
+          <span>Badges</span>
+          <strong>
+            {playerStats.achievements.length}/{ACHIEVEMENTS.length}
+          </strong>
+        </div>
+      </div>
+
+      <div className="profile-grid">
+        <div className="daily-card profile-daily">
+          <div>
+            <span className="reward-label">Daily Check-in</span>
+            <h3>🔥 {playerStats.currentStreak} Day Streak</h3>
+            <p>Come back every day and collect coins.</p>
+          </div>
+
+          <button
+            onClick={claimDailyReward}
+            disabled={playerStats.lastDailyClaim === today}
+          >
+            {playerStats.lastDailyClaim === today
+              ? "Checked-in Today"
+              : "Check-in +25 Coins"}
+          </button>
+        </div>
+
+        <StreakCalendar playerStats={playerStats} />
+
+        <ShopBox
+          playerStats={playerStats}
+          setPlayerStats={setPlayerStats}
+          setRewardMessage={() => {}}
+        />
+
+        <div className="achievement-box">
+          <h3>Badges</h3>
+
+          <div className="achievement-list">
+            {ACHIEVEMENTS.map((achievement) => {
+              const unlocked = playerStats.achievements.includes(achievement.id);
+
+              return (
+                <div
+                  key={achievement.id}
+                  className={`achievement-item ${unlocked ? "unlocked" : ""}`}
+                >
+                  <div>
+                    <strong>
+                      {unlocked ? "🏆" : "🔒"} {achievement.title}
+                    </strong>
+                    <p>{achievement.description}</p>
+                  </div>
+                  <span>+{achievement.reward}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DailyChallenge({ user }) {
+  const today = getTodayKey();
+  const dailyLevel = getDailyChallengeLevel();
+  const playerStats = getSavedPlayerStats(user);
+  const completed = playerStats.completedDailyChallenges.includes(`daily-${today}`);
+
+  return (
+    <div className="daily-page">
+      <div className="daily-intro">
+        <span className="section-tag">Today’s Puzzle</span>
+        <h1>Daily Challenge</h1>
+        <p>
+          Solve today’s special Queens Arena puzzle. Complete it once per day to
+          earn bonus coins.
+        </p>
+
+        <div className="daily-info-grid">
+          <div>
+            <span>Date</span>
+            <strong>{today}</strong>
+          </div>
+
+          <div>
+            <span>Challenge Level</span>
+            <strong>{dailyLevel}</strong>
+          </div>
+
+          <div>
+            <span>Status</span>
+            <strong>{completed ? "Completed" : "Pending"}</strong>
+          </div>
+        </div>
+      </div>
+
+      <Game user={user} mode="daily" />
+    </div>
   );
 }
 
@@ -1263,9 +2005,10 @@ function Footer() {
 
       <div className="footer-links">
         <span>100 Levels</span>
-        <span>Ranked Arena</span>
-        <span>Brain Training</span>
-        <span>Logic Battles</span>
+        <span>Coins</span>
+        <span>Daily Check-in</span>
+        <span>Streaks</span>
+        <span>Daily Challenge</span>
       </div>
 
       <small>© 2026 Queens Arena. Play smart, win smarter.</small>
@@ -1319,9 +2062,14 @@ function App() {
 
         {currentPage === "game" && user && <Game user={user} />}
 
-        {currentPage === "game" && !user && (
-          <Login setUser={setUser} setCurrentPage={setCurrentPage} />
-        )}
+        {currentPage === "daily" && user && <DailyChallenge user={user} />}
+
+        {currentPage === "profile" && user && <Profile user={user} />}
+
+        {(currentPage === "game" ||
+          currentPage === "daily" ||
+          currentPage === "profile") &&
+          !user && <Login setUser={setUser} setCurrentPage={setCurrentPage} />}
 
         {currentPage === "leaderboard" && <Leaderboard />}
       </main>
