@@ -6,6 +6,7 @@ const connectDB = require("./config/db");
 
 const authRoutes = require("./routes/authRoutes");
 const scoreRoutes = require("./routes/scoreRoutes");
+const playerStatsRoutes = require("./routes/playerStatsRoutes");
 
 dotenv.config();
 
@@ -49,7 +50,7 @@ app.use(
 );
 
 /* Middlewares */
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 if (process.env.NODE_ENV !== "production") {
@@ -67,6 +68,7 @@ app.get("/", (req, res) => {
 /* API Routes */
 app.use("/api/auth", authRoutes);
 app.use("/api/scores", scoreRoutes);
+app.use("/api/player-stats", playerStatsRoutes);
 
 /* 404 Route */
 app.use((req, res) => {

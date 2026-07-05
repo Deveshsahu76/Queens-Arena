@@ -161,6 +161,81 @@ const getSavedPlayerStats = (user) => {
   }
 };
 
+const hasMeaningfulStats = (stats) => {
+  const normalized = normalizePlayerStats(stats);
+
+  return (
+    normalized.coins > 0 ||
+    normalized.hintCredits > 0 ||
+    normalized.totalWins > 0 ||
+    normalized.noHintWins > 0 ||
+    normalized.highestLevel > 1 ||
+    normalized.currentStreak > 0 ||
+    normalized.bestStreak > 0 ||
+    normalized.completedLevels.length > 0 ||
+    normalized.achievements.length > 0 ||
+    normalized.dailyChallengesCompleted > 0 ||
+    normalized.completedDailyChallenges.length > 0 ||
+    normalized.checkInDates.length > 0
+  );
+};
+
+const mergeInitialStats = (localStats, cloudStats) => {
+  const local = normalizePlayerStats(localStats);
+  const cloud = normalizePlayerStats(cloudStats);
+
+  if (!hasMeaningfulStats(cloud) && hasMeaningfulStats(local)) {
+    return local;
+  }
+
+  return cloud;
+};
+
+const cleanStatsForCloud = (stats) => {
+  const normalized = normalizePlayerStats(stats);
+
+  return {
+    coins: normalized.coins,
+    hintCredits: normalized.hintCredits,
+    totalWins: normalized.totalWins,
+    noHintWins: normalized.noHintWins,
+    highestLevel: normalized.highestLevel,
+    currentStreak: normalized.currentStreak,
+    bestStreak: normalized.bestStreak,
+    lastDailyClaim: normalized.lastDailyClaim,
+    checkInDates: normalized.checkInDates,
+    completedLevels: normalized.completedLevels,
+    achievements: normalized.achievements,
+    dailyChallengesCompleted: normalized.dailyChallengesCompleted,
+    completedDailyChallenges: normalized.completedDailyChallenges,
+  };
+};
+
+const fetchPlayerStatsFromCloud = async () => {
+  try {
+    const res = await API.get("/player-stats/me");
+
+    if (res.data?.stats) {
+      return normalizePlayerStats(res.data.stats);
+    }
+
+    return null;
+  } catch (error) {
+    console.log("Could not fetch cloud player stats:", error.message);
+    return null;
+  }
+};
+
+const savePlayerStatsToCloud = async (stats) => {
+  try {
+    await API.put("/player-stats/me", cleanStatsForCloud(stats));
+    return true;
+  } catch (error) {
+    console.log("Could not save cloud player stats:", error.message);
+    return false;
+  }
+};
+
 const applyAchievementRewards = (stats) => {
   const unlocked = new Set(stats.achievements || []);
   let bonusCoins = 0;
@@ -892,9 +967,13 @@ function WinModal({
     <div className="modal-backdrop">
       <div className="win-modal">
         <div className="celebrate">🎉🏆✨</div>
-        <h1>{isDailyChallenge ? "Daily Challenge Complete!" : "Congratulations!"}</h1>
+        <h1>
+          {isDailyChallenge ? "Daily Challenge Complete!" : "Congratulations!"}
+        </h1>
         <p>
-          You completed {isDailyChallenge ? "today's challenge" : `Level ${level}`} successfully.
+          You completed{" "}
+          {isDailyChallenge ? "today's challenge" : `Level ${level}`}{" "}
+          successfully.
         </p>
 
         <div className="modal-stats">
@@ -957,9 +1036,9 @@ function StreakCalendar({ playerStats }) {
         {days.map((day) => (
           <span
             key={day}
-            className={`streak-day ${
-              checkedDays.has(day) ? "active" : ""
-            } ${day === today ? "today" : ""}`}
+            className={`streak-day ${checkedDays.has(day) ? "active" : ""} ${
+              day === today ? "today" : ""
+            }`}
             title={day}
           ></span>
         ))}
@@ -1060,7 +1139,10 @@ function Game({ user, mode = "level" }) {
   const [hintText, setHintText] = useState("");
   const [coinsEarned, setCoinsEarned] = useState(0);
   const [rewardMessage, setRewardMessage] = useState("");
-  const [playerStats, setPlayerStats] = useState(() => getSavedPlayerStats(user));
+  const [cloudReady, setCloudReady] = useState(false);
+  const [playerStats, setPlayerStats] = useState(() =>
+    getSavedPlayerStats(user)
+  );
   const [message, setMessage] = useState(
     isDailyChallenge
       ? "Complete today's challenge and earn bonus coins."
@@ -1068,13 +1150,41 @@ function Game({ user, mode = "level" }) {
   );
 
   useEffect(() => {
-    const savedStats = getSavedPlayerStats(user);
-    setPlayerStats(savedStats);
+    const loadStats = async () => {
+      setCloudReady(false);
+
+      const localStats = getSavedPlayerStats(user);
+      setPlayerStats(localStats);
+
+      const cloudStats = await fetchPlayerStatsFromCloud();
+
+      if (cloudStats) {
+        const mergedStats = mergeInitialStats(localStats, cloudStats);
+        localStorage.setItem(getPlayerStatsKey(user), JSON.stringify(mergedStats));
+        setPlayerStats(mergedStats);
+      }
+
+      setCloudReady(true);
+    };
+
+    if (user) {
+      loadStats();
+    }
   }, [user]);
 
   useEffect(() => {
     localStorage.setItem(getPlayerStatsKey(user), JSON.stringify(playerStats));
-  }, [playerStats, user]);
+
+    if (!user || !cloudReady) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      savePlayerStatsToCloud(playerStats);
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [playerStats, user, cloudReady]);
 
   useEffect(() => {
     let timer;
@@ -1156,7 +1266,8 @@ function Game({ user, mode = "level" }) {
       setCoinsEarned(reward);
 
       setPlayerStats((prev) => {
-        const alreadyCompleted = prev.completedDailyChallenges.includes(challengeKey);
+        const alreadyCompleted =
+          prev.completedDailyChallenges.includes(challengeKey);
 
         const updatedStats = {
           ...prev,
@@ -1476,7 +1587,8 @@ function Game({ user, mode = "level" }) {
 
   const currentStatus = validatePartialQueens(queens, regionMap, size);
   const dailyChallengeKey = `daily-${today}`;
-  const dailyCompleted = playerStats.completedDailyChallenges.includes(dailyChallengeKey);
+  const dailyCompleted =
+    playerStats.completedDailyChallenges.includes(dailyChallengeKey);
 
   return (
     <>
@@ -1735,20 +1847,53 @@ function Game({ user, mode = "level" }) {
 }
 
 function Profile({ user }) {
-  const [playerStats, setPlayerStats] = useState(() => getSavedPlayerStats(user));
+  const [playerStats, setPlayerStats] = useState(() =>
+    getSavedPlayerStats(user)
+  );
+  const [profileMessage, setProfileMessage] = useState("");
+  const [cloudReady, setCloudReady] = useState(false);
   const today = getTodayKey();
 
   useEffect(() => {
-    const savedStats = getSavedPlayerStats(user);
-    setPlayerStats(savedStats);
+    const loadStats = async () => {
+      setCloudReady(false);
+
+      const localStats = getSavedPlayerStats(user);
+      setPlayerStats(localStats);
+
+      const cloudStats = await fetchPlayerStatsFromCloud();
+
+      if (cloudStats) {
+        const mergedStats = mergeInitialStats(localStats, cloudStats);
+        localStorage.setItem(getPlayerStatsKey(user), JSON.stringify(mergedStats));
+        setPlayerStats(mergedStats);
+      }
+
+      setCloudReady(true);
+    };
+
+    if (user) {
+      loadStats();
+    }
   }, [user]);
 
   useEffect(() => {
     localStorage.setItem(getPlayerStatsKey(user), JSON.stringify(playerStats));
-  }, [playerStats, user]);
+
+    if (!user || !cloudReady) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      savePlayerStatsToCloud(playerStats);
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [playerStats, user, cloudReady]);
 
   const claimDailyReward = () => {
     if (playerStats.lastDailyClaim === today) {
+      setProfileMessage("Daily check-in already claimed today.");
       return;
     }
 
@@ -1772,6 +1917,12 @@ function Profile({ user }) {
 
       return applyAchievementRewards(updatedStats);
     });
+
+    setProfileMessage(
+      nextStreak % 7 === 0
+        ? `🔥 Day ${nextStreak} streak! +${dailyCoins} bonus coins claimed.`
+        : `🎁 Daily check-in claimed! +${dailyCoins} coins.`
+    );
   };
 
   return (
@@ -1838,6 +1989,8 @@ function Profile({ user }) {
               ? "Checked-in Today"
               : "Check-in +25 Coins"}
           </button>
+
+          {profileMessage && <small>{profileMessage}</small>}
         </div>
 
         <StreakCalendar playerStats={playerStats} />
@@ -1845,7 +1998,7 @@ function Profile({ user }) {
         <ShopBox
           playerStats={playerStats}
           setPlayerStats={setPlayerStats}
-          setRewardMessage={() => {}}
+          setRewardMessage={setProfileMessage}
         />
 
         <div className="achievement-box">
@@ -1881,7 +2034,9 @@ function DailyChallenge({ user }) {
   const today = getTodayKey();
   const dailyLevel = getDailyChallengeLevel();
   const playerStats = getSavedPlayerStats(user);
-  const completed = playerStats.completedDailyChallenges.includes(`daily-${today}`);
+  const completed = playerStats.completedDailyChallenges.includes(
+    `daily-${today}`
+  );
 
   return (
     <div className="daily-page">
