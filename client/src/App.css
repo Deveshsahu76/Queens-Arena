@@ -937,3 +937,11 @@ th {
     font-size: clamp(14px, calc(150px / var(--board-size)), 22px);
   }
 }
+/* Navbar normal scroll ke sath rahega, fixed/sticky nahi */
+.navbar {
+  position: static !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  transform: none !important;
+}
