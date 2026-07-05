@@ -19,14 +19,16 @@ API.interceptors.request.use((config) => {
 });
 
 const REGION_COLORS = [
-  "#ff8a65",
-  "#ffd180",
-  "#ce93d8",
-  "#90caf9",
-  "#a5d6a7",
-  "#e6ee9c",
-  "#b0bec5",
-  "#b39ddb",
+  "#fb7185",
+  "#f59e0b",
+  "#a78bfa",
+  "#38bdf8",
+  "#34d399",
+  "#facc15",
+  "#94a3b8",
+  "#818cf8",
+  "#f472b6",
+  "#2dd4bf",
 ];
 
 const ACHIEVEMENTS = [
@@ -306,52 +308,62 @@ const shuffleArray = (array, random) => {
 };
 
 const getLevelConfig = (level) => {
-  if (level <= 20) {
+  if (level <= 10) {
     return {
       boardSize: 4,
-      difficulty: "Beginner",
+      difficulty: "Warm Up",
       difficultyClass: "beginner",
       hintLimit: 1,
-      title: "Learn the basics",
+      title: "Learn the rules",
     };
   }
 
-  if (level <= 40) {
+  if (level <= 25) {
     return {
       boardSize: 5,
-      difficulty: "Easy",
+      difficulty: "Tricky",
       difficultyClass: "easy",
-      hintLimit: 2,
-      title: "Region thinking",
+      hintLimit: 1,
+      title: "Think before placing",
     };
   }
 
-  if (level <= 60) {
+  if (level <= 45) {
     return {
       boardSize: 6,
-      difficulty: "Medium",
+      difficulty: "Challenging",
       difficultyClass: "medium",
-      hintLimit: 2,
-      title: "Smarter moves",
+      hintLimit: 1,
+      title: "Fewer safe cells",
     };
   }
 
-  if (level <= 80) {
+  if (level <= 70) {
     return {
       boardSize: 7,
       difficulty: "Hard",
       difficultyClass: "hard",
-      hintLimit: 1,
-      title: "Tactical puzzle",
+      hintLimit: 0,
+      title: "No free hints",
+    };
+  }
+
+  if (level <= 90) {
+    return {
+      boardSize: 8,
+      difficulty: "Expert",
+      difficultyClass: "expert",
+      hintLimit: 0,
+      title: "Master the arena",
     };
   }
 
   return {
     boardSize: 8,
-    difficulty: "Expert",
-    difficultyClass: "expert",
-    hintLimit: 1,
-    title: "Grandmaster zone",
+    difficulty: "Grandmaster",
+    difficultyClass: "grandmaster",
+    hintLimit: 0,
+    title: "Final boss levels",
   };
 };
 
@@ -683,6 +695,13 @@ function Navbar({ user, currentPage, setCurrentPage, logout }) {
             </button>
 
             <button
+              className={currentPage === "how" ? "active-nav" : ""}
+              onClick={() => setCurrentPage("how")}
+            >
+              How to Play
+            </button>
+
+            <button
               className={currentPage === "profile" ? "active-nav" : ""}
               onClick={() => setCurrentPage("profile")}
             >
@@ -716,6 +735,13 @@ function Navbar({ user, currentPage, setCurrentPage, logout }) {
               onClick={() => setCurrentPage("register")}
             >
               Register
+            </button>
+
+            <button
+              className={currentPage === "how" ? "active-nav" : ""}
+              onClick={() => setCurrentPage("how")}
+            >
+              How to Play
             </button>
 
             <button
@@ -1160,7 +1186,10 @@ function Game({ user, mode = "level" }) {
 
       if (cloudStats) {
         const mergedStats = mergeInitialStats(localStats, cloudStats);
-        localStorage.setItem(getPlayerStatsKey(user), JSON.stringify(mergedStats));
+        localStorage.setItem(
+          getPlayerStatsKey(user),
+          JSON.stringify(mergedStats)
+        );
         setPlayerStats(mergedStats);
       }
 
@@ -1829,15 +1858,14 @@ function Game({ user, mode = "level" }) {
           </div>
 
           <div className="rules-box">
-            <h3>How to Earn Coins</h3>
+            <h3>Quick Rules</h3>
 
             <ol>
-              <li>Complete a new level to earn coins.</li>
-              <li>No-hint level clear gives bonus coins.</li>
-              <li>Daily check-in gives coins every day.</li>
-              <li>Daily challenge gives bonus coins.</li>
-              <li>Achievements unlock bonus coins.</li>
-              <li>Use coins to buy hint credits.</li>
+              <li>One queen per row.</li>
+              <li>One queen per column.</li>
+              <li>One queen per color region.</li>
+              <li>Queens cannot touch each other.</li>
+              <li>Use × marks to remove impossible cells.</li>
             </ol>
           </div>
         </aside>
@@ -1865,7 +1893,10 @@ function Profile({ user }) {
 
       if (cloudStats) {
         const mergedStats = mergeInitialStats(localStats, cloudStats);
-        localStorage.setItem(getPlayerStatsKey(user), JSON.stringify(mergedStats));
+        localStorage.setItem(
+          getPlayerStatsKey(user),
+          JSON.stringify(mergedStats)
+        );
         setPlayerStats(mergedStats);
       }
 
@@ -2071,6 +2102,95 @@ function DailyChallenge({ user }) {
   );
 }
 
+function HowToPlay() {
+  return (
+    <div className="how-page">
+      <section className="how-hero">
+        <span className="section-tag">Game Guide</span>
+        <h1>How to Play Queens Arena</h1>
+        <p>
+          Place queens smartly on colorful regions. Every move matters. One
+          wrong placement can block the whole board.
+        </p>
+      </section>
+
+      <section className="how-grid">
+        <div className="how-card">
+          <span>01</span>
+          <h3>One Queen Per Row</h3>
+          <p>
+            Each row can contain only one queen. Do not place two queens in the
+            same row.
+          </p>
+        </div>
+
+        <div className="how-card">
+          <span>02</span>
+          <h3>One Queen Per Column</h3>
+          <p>
+            Each column can contain only one queen. Plan columns carefully
+            before placing.
+          </p>
+        </div>
+
+        <div className="how-card">
+          <span>03</span>
+          <h3>One Queen Per Color</h3>
+          <p>
+            Every colored region needs exactly one queen. Same color region
+            cannot have multiple queens.
+          </p>
+        </div>
+
+        <div className="how-card">
+          <span>04</span>
+          <h3>Queens Cannot Touch</h3>
+          <p>
+            Queens cannot touch each other horizontally, vertically, or
+            diagonally.
+          </p>
+        </div>
+
+        <div className="how-card premium-rule">
+          <span>05</span>
+          <h3>Use Marks</h3>
+          <p>Use × marks to remove impossible cells and solve the puzzle faster.</p>
+        </div>
+
+        <div className="how-card premium-rule">
+          <span>06</span>
+          <h3>Earn Coins</h3>
+          <p>
+            Complete new levels, daily challenges, streaks, and achievements to
+            earn coins.
+          </p>
+        </div>
+      </section>
+
+      <section className="how-tips">
+        <h2>Pro Tips</h2>
+
+        <div className="tips-list">
+          <div>
+            <strong>Start with small regions</strong>
+            <p>Small color regions usually have fewer possible cells.</p>
+          </div>
+
+          <div>
+            <strong>Use × marks often</strong>
+            <p>Marking wrong cells makes hard levels easier to solve.</p>
+          </div>
+
+          <div>
+            <strong>Save hints for hard levels</strong>
+            <p>Levels after 45 have no free hints, so buy hint credits wisely.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function Leaderboard() {
   const [boardSize, setBoardSize] = useState(4);
   const [leaderboard, setLeaderboard] = useState([]);
@@ -2159,7 +2279,7 @@ function Footer() {
       <p>Think sharp. Place wisely. Rule the arena.</p>
 
       <div className="footer-links">
-        <span>100 Levels</span>
+        <span>Harder Levels</span>
         <span>Coins</span>
         <span>Daily Check-in</span>
         <span>Streaks</span>
@@ -2218,6 +2338,8 @@ function App() {
         {currentPage === "game" && user && <Game user={user} />}
 
         {currentPage === "daily" && user && <DailyChallenge user={user} />}
+
+        {currentPage === "how" && <HowToPlay />}
 
         {currentPage === "profile" && user && <Profile user={user} />}
 
