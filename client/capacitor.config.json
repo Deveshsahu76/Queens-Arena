@@ -1,0 +1,8 @@
+{
+  "appId": "com.deveshsahu.queensarena",
+  "appName": "Queens Arena",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

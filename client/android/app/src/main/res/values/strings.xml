@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Queens Arena</string>
+    <string name="title_activity_main">Queens Arena</string>
+    <string name="package_name">com.deveshsahu.queensarena</string>
+    <string name="custom_url_scheme">com.deveshsahu.queensarena</string>
+</resources>

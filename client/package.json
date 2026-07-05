@@ -10,11 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/cli": "^7.6.7",
+    "@capacitor/core": "^8.4.1",
     "@vitejs/plugin-react": "^4.3.1",
     "axios": "^1.7.7",
-    "vite": "^5.4.8",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-  },
-  "devDependencies": {}
+    "react-dom": "^18.3.1",
+    "vite": "^5.4.8"
+  }
 }
