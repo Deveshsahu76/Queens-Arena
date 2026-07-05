@@ -1476,3 +1476,589 @@ th {
     min-height: 20px;
   }
 }
+/* ================================================= */
+/* CLEAN UI/UX REDESIGN OVERRIDES - Queens Arena */
+/* Paste this at the very end of App.css */
+/* ================================================= */
+
+:root {
+  --clean-bg: #f8fafc;
+  --clean-card: #ffffff;
+  --clean-border: rgba(15, 23, 42, 0.08);
+  --clean-soft: #f1f5f9;
+  --clean-text: #0f172a;
+  --clean-muted: #64748b;
+  --clean-primary: #2563eb;
+  --clean-primary-dark: #1d4ed8;
+  --clean-gold: #f59e0b;
+  --clean-green: #22c55e;
+}
+
+/* Overall page clean look */
+body {
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(245, 158, 11, 0.1), transparent 32%),
+    linear-gradient(135deg, #f8fafc, #eef2f7) !important;
+}
+
+.main-content {
+  padding-top: 22px !important;
+}
+
+/* Navbar clean */
+.navbar {
+  width: min(1160px, calc(100% - 24px)) !important;
+  min-height: 64px !important;
+  padding: 10px 16px !important;
+  border-radius: 20px !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid var(--clean-border) !important;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08) !important;
+}
+
+.brand {
+  font-size: 23px !important;
+}
+
+.brand-icon {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 12px !important;
+}
+
+.nav-links {
+  gap: 7px !important;
+}
+
+.nav-links button {
+  min-height: 36px !important;
+  padding: 0 13px !important;
+  font-size: 13px !important;
+  border-radius: 999px !important;
+}
+
+.user-name {
+  font-size: 13px !important;
+  max-width: 130px !important;
+}
+
+/* Main game layout clean */
+.game-shell {
+  width: min(1120px, 96vw) !important;
+  grid-template-columns: minmax(0, 1fr) 280px !important;
+  gap: 18px !important;
+}
+
+.game-area,
+.side-panel,
+.auth-card,
+.leaderboard-card,
+.profile-hero,
+.daily-intro {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border: 1px solid var(--clean-border) !important;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08) !important;
+  backdrop-filter: blur(14px) !important;
+}
+
+.game-area {
+  padding: 22px !important;
+  border-radius: 24px !important;
+}
+
+.side-panel {
+  padding: 14px !important;
+  border-radius: 24px !important;
+  top: 18px !important;
+}
+
+/* Top section less bulky */
+.top-game-bar {
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.top-game-bar h1 {
+  font-size: clamp(26px, 3vw, 38px) !important;
+  margin-bottom: 3px !important;
+}
+
+.top-game-bar p {
+  font-size: 14px !important;
+}
+
+.difficulty-pill {
+  margin-bottom: 7px !important;
+  padding: 6px 11px !important;
+  font-size: 11px !important;
+}
+
+/* Timer / coin boxes cleaner */
+.timer-box {
+  min-width: 82px !important;
+  padding: 10px 11px !important;
+  border-radius: 15px !important;
+  background: #f8fafc !important;
+  border: 1px solid var(--clean-border) !important;
+}
+
+.timer-box strong {
+  font-size: 20px !important;
+}
+
+.coin-wallet strong {
+  color: var(--clean-gold) !important;
+}
+
+/* Progress bar slim */
+.level-progress {
+  margin-top: 14px !important;
+}
+
+.progress-info {
+  font-size: 13px !important;
+}
+
+.progress-track {
+  height: 8px !important;
+}
+
+/* Controls compact */
+.controls-row {
+  margin: 16px 0 !important;
+  gap: 8px !important;
+}
+
+.controls-row button,
+.controls-row select,
+.level-badge {
+  min-height: 36px !important;
+  padding: 0 13px !important;
+  font-size: 13px !important;
+  border-radius: 999px !important;
+}
+
+.level-badge {
+  box-shadow: none !important;
+}
+
+/* Board better centered */
+.board {
+  width: 470px !important;
+  height: 470px !important;
+  max-width: min(88vw, 470px) !important;
+  max-height: min(88vw, 470px) !important;
+  border-width: 3px !important;
+  border-radius: 20px !important;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.14) !important;
+}
+
+.cell {
+  border-right: 1px solid rgba(15, 23, 42, 0.45) !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.45) !important;
+}
+
+.cell:hover {
+  filter: brightness(1.04) !important;
+  box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.38) !important;
+}
+
+.queen {
+  font-size: clamp(20px, calc(235px / var(--board-size)), 40px) !important;
+}
+
+/* Hint/status cleaner */
+.hint-panel,
+.status-box,
+.daily-banner {
+  width: min(100%, 520px) !important;
+  margin-top: 14px !important;
+  padding: 13px 15px !important;
+  border-radius: 16px !important;
+  background: #f8fafc !important;
+  border: 1px solid var(--clean-border) !important;
+}
+
+.status-box p {
+  font-size: 14px !important;
+  font-weight: 800 !important;
+}
+
+/* ================================================= */
+/* Most important: Game page side-panel cleanup */
+/* Game page me sirf important cheeze dikhao */
+/* Profile page me full details dikhenge */
+/* ================================================= */
+
+.game-shell .side-panel .streak-card,
+.game-shell .side-panel .shop-box,
+.game-shell .side-panel .achievement-box,
+.game-shell .side-panel .rules-box {
+  display: none !important;
+}
+
+/* Side panel visible cards clean */
+.profile-box,
+.reward-card,
+.daily-card {
+  padding: 13px !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  border: 1px solid var(--clean-border) !important;
+  box-shadow: none !important;
+}
+
+.profile-box {
+  margin-bottom: 10px !important;
+}
+
+.avatar {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 13px !important;
+  font-size: 20px !important;
+}
+
+.profile-box h3 {
+  font-size: 16px !important;
+}
+
+.reward-card,
+.daily-card {
+  margin-top: 10px !important;
+}
+
+.reward-card h2,
+.daily-card h3 {
+  font-size: 20px !important;
+  margin: 4px 0 !important;
+}
+
+.reward-card p,
+.daily-card p {
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+}
+
+.reward-label {
+  padding: 5px 9px !important;
+  font-size: 10px !important;
+}
+
+/* Daily button cleaner */
+.daily-card button {
+  min-height: 38px !important;
+  padding: 0 12px !important;
+  border-radius: 12px !important;
+  font-size: 13px !important;
+}
+
+/* Stats compact */
+.stats-grid {
+  margin-top: 10px !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 8px !important;
+}
+
+.stat-card {
+  padding: 11px !important;
+  border-radius: 15px !important;
+  background: #f8fafc !important;
+  border: 1px solid var(--clean-border) !important;
+}
+
+.stat-card span {
+  font-size: 11px !important;
+  margin-bottom: 4px !important;
+}
+
+.stat-card strong {
+  font-size: 18px !important;
+}
+
+/* Profile page clean and premium */
+.profile-page,
+.daily-page {
+  width: min(1120px, 96vw) !important;
+  gap: 18px !important;
+}
+
+.profile-hero,
+.daily-intro {
+  padding: 24px !important;
+  border-radius: 24px !important;
+}
+
+.profile-avatar {
+  width: 72px !important;
+  height: 72px !important;
+  border-radius: 22px !important;
+  font-size: 36px !important;
+}
+
+.profile-hero h1,
+.daily-intro h1 {
+  font-size: clamp(30px, 4vw, 46px) !important;
+}
+
+.profile-cards {
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 12px !important;
+}
+
+.profile-card {
+  padding: 16px !important;
+  border-radius: 20px !important;
+  background: #ffffff !important;
+  border: 1px solid var(--clean-border) !important;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06) !important;
+}
+
+.profile-card strong {
+  font-size: 22px !important;
+}
+
+/* Profile details in neat grid */
+.profile-grid {
+  grid-template-columns: 1fr 1fr !important;
+  gap: 14px !important;
+}
+
+.profile-grid .streak-card,
+.profile-grid .shop-box,
+.profile-grid .achievement-box,
+.profile-grid .daily-card {
+  margin-top: 0 !important;
+}
+
+/* Streak cleaner */
+.streak-card,
+.shop-box,
+.achievement-box {
+  padding: 16px !important;
+  border-radius: 20px !important;
+  background: #ffffff !important;
+  border: 1px solid var(--clean-border) !important;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06) !important;
+}
+
+.streak-grid {
+  gap: 5px !important;
+}
+
+.streak-day {
+  min-height: 20px !important;
+  border-radius: 5px !important;
+}
+
+.streak-day.active {
+  background: var(--clean-green) !important;
+}
+
+/* Shop cleaner */
+.shop-item {
+  padding: 11px !important;
+  border-radius: 14px !important;
+  background: #f8fafc !important;
+  border: 1px solid var(--clean-border) !important;
+}
+
+.shop-item button {
+  min-height: 34px !important;
+  font-size: 12px !important;
+}
+
+/* Achievements cleaner */
+.achievement-list {
+  max-height: 260px !important;
+}
+
+.achievement-item {
+  padding: 10px !important;
+  border-radius: 14px !important;
+  background: #f8fafc !important;
+  opacity: 0.82 !important;
+}
+
+.achievement-item.unlocked {
+  background: rgba(245, 158, 11, 0.12) !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+  opacity: 1 !important;
+}
+
+/* Daily page clean */
+.daily-info-grid {
+  gap: 12px !important;
+}
+
+.daily-info-grid div {
+  padding: 14px !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  border: 1px solid var(--clean-border) !important;
+}
+
+/* Leaderboard clean */
+.leaderboard-card {
+  border-radius: 24px !important;
+}
+
+table {
+  border-radius: 16px !important;
+}
+
+th {
+  background: #f1f5f9 !important;
+  color: var(--clean-primary) !important;
+}
+
+td,
+th {
+  padding: 12px !important;
+  font-size: 14px !important;
+}
+
+/* Modal clean */
+.win-modal {
+  border-radius: 24px !important;
+  padding: 28px !important;
+}
+
+.modal-stats {
+  grid-template-columns: repeat(3, 1fr) !important;
+}
+
+.modal-stats div {
+  padding: 13px !important;
+  border-radius: 15px !important;
+}
+
+/* Footer smaller */
+.footer {
+  width: min(1160px, calc(100% - 24px)) !important;
+  padding: 18px !important;
+  border-radius: 22px !important;
+}
+
+.footer-links {
+  gap: 7px !important;
+}
+
+.footer-links span {
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+}
+
+/* Mobile UX */
+@media (max-width: 1050px) {
+  .game-shell {
+    grid-template-columns: 1fr !important;
+  }
+
+  .side-panel {
+    position: static !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+
+  .side-panel .profile-box,
+  .side-panel .reward-card,
+  .side-panel .daily-card,
+  .side-panel .stats-grid {
+    margin-top: 0 !important;
+  }
+
+  .side-panel .stats-grid {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .navbar {
+    width: calc(100% - 14px) !important;
+    padding: 10px !important;
+    gap: 10px !important;
+  }
+
+  .nav-links {
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    padding-bottom: 3px !important;
+  }
+
+  .nav-links::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .nav-links button {
+    flex-shrink: 0 !important;
+  }
+
+  .user-name {
+    display: none !important;
+  }
+
+  .game-area {
+    padding: 14px !important;
+    border-radius: 20px !important;
+  }
+
+  .top-game-bar {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    align-items: stretch !important;
+  }
+
+  .top-game-bar > div:first-child {
+    grid-column: 1 / -1 !important;
+    text-align: center !important;
+  }
+
+  .timer-box {
+    width: 100% !important;
+  }
+
+  .board {
+    width: min(92vw, 390px) !important;
+    height: min(92vw, 390px) !important;
+    border-radius: 16px !important;
+  }
+
+  .side-panel {
+    grid-template-columns: 1fr !important;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .profile-cards {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .profile-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .modal-stats {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .board {
+    width: 92vw !important;
+    height: 92vw !important;
+  }
+
+  .profile-cards {
+    grid-template-columns: 1fr !important;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
